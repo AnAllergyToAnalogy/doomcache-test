@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: doomcache-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -15,6 +19,8 @@ jobs:
           aws configure set aws_access_key_id ${{ secrets.R2_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.R2_SECRET_ACCESS_KEY }}
           aws configure set default.region auto
+          aws configure set default.s3.max_concurrent_requests 50
+          aws configure set default.s3.multipart_threshold 500MB
 
       - name: Sync /data to doomcache
         env:
@@ -22,4 +28,6 @@ jobs:
         run: |
           aws s3 sync ./data s3://doomcache/ \
             --delete \
+            --exclude "*" --include "*.json" --include "*.txt" \
+            --only-show-errors \
             --endpoint-url $AWS_ENDPOINT_URL
